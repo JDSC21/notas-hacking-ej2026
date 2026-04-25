@@ -1,0 +1,4 @@
+flags
+what do flags mean?
+
+picoCTF{F1AG5AND5TUFF}
