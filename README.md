@@ -2,5 +2,5 @@
 
 ## Notas de hacking de los retos resueltos durante el semestre
 
-+ Jesús Davis Sánchez Chávez
++ Jesús David Sánchez Chávez
 + jesdavsc@hotmail.com
