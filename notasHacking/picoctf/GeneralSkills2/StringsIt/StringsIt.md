@@ -1,4 +1,4 @@
-Strings it
+# Strings it
 
 ## Descripción
 En este reto recibes un binario descargable pero no debes (y no conviene) ejecutarlo directamente. El objetivo es extraer la bandera sin correr código no confiable.
