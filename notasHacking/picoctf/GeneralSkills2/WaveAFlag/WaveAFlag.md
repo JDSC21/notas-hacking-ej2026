@@ -1,5 +1,5 @@
 
-Wave a flag
+# Wave a flag
 
 ## Descripción
 Este reto muestra un binario que incluye una opción de ayuda. La idea es obtener información útil (la ayuda) sin ejecutar comportamiento no deseado del binario.
