@@ -44,4 +44,4 @@ picoCTF{Hiddinng_An_imag3_within_@n_ima9e_dc2ab58f}
 ## Notas adicionales
 
 Extraemos archivos ocultos en una imagen
-## Referencias
+## Referencia
