@@ -1,8 +1,0 @@
-Description
-
-How about some hide and seek heh?
-Look at this image here.
-
-Podemos usar el webshell de picoCTF luego cyberchef para descifrar el código
-
-##Falto resolver

@@ -1,5 +1,19 @@
+
+
+
+# Reto ReadMyCert
+
+## Descripción 
 How about we take you on an adventure on exploring certificate signing requests
 Take a look at this CSR file here.
 Download the certificate signing request and try to read it.
 
+
+## Solución
+
 openssl req -in readmycert.csr -noout -text | grep "picoCTF"
+
+
+## Notas Adicionales
+
+### Referencias
