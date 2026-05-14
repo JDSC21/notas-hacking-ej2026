@@ -62,3 +62,4 @@ La vulnerabilidad en este reto radica en que el módulo N es par, lo que signifi
 ## Referencias
 
 - https://musthofa-kamaluddin.medium.com/even-rsa-can-be-broken-picoctf-2025-challenge-write-up-891447150064
+
